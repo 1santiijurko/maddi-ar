@@ -1,8 +1,8 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MADDI · Color 04</title>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MADDI · Color 05</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script><script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/aframe/build/aframe-ar.js"></script>
 <style>body{margin:0;background:#111;font-family:system-ui}#top{position:fixed;top:10px;left:10px;right:10px;background:#143d35ee;color:white;z-index:9;padding:12px;border-radius:10px;text-align:center}#bar{position:fixed;bottom:15px;left:10px;right:10px;z-index:9;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}button,a{background:#fff;border:0;border-radius:9px;padding:12px;color:#173d34;font-weight:bold;text-decoration:none}#swatches{background:#fff;padding:8px;border-radius:9px;display:flex;gap:8px}.dot{display:inline-block;width:24px;height:24px;border:1px solid #888;border-radius:5px}</style></head><body>
-<div id="top">MADDI · Prueba 04: niña de frente y lectura corregida</div>
-<div id="bar"><button id="scan">Leer colores del papel</button><span id="swatches">Vestido <span class="dot" id="v"></span> Pelo <span class="dot" id="p"></span></span><a href="lamina.html">Lámina</a></div>
+<div id="top">MADDI · Prueba 05: selección precisa de colores</div>
+<div id="bar"><button id="scan">Elegir colores en pantalla</button><span id="swatches">Vestido <span class="dot" id="v"></span> Pelo <span class="dot" id="p"></span></span><a href="lamina.html">Lámina</a></div>
 <a-scene embedded vr-mode-ui="enabled:false" renderer="antialias:true" arjs="sourceType:webcam;debugUIEnabled:false;trackingMethod:best;">
 <a-marker preset="hiro" id="marker"><a-entity position="0 0.40 0" rotation="-70 0 0">
 <a-cylinder position="-0.28 -0.27 0" radius=".014" height=".54" color="#527F93"></a-cylinder><a-cylinder position=".28 -0.27 0" radius=".014" height=".54" color="#527F93"></a-cylinder>
@@ -19,25 +19,47 @@ const marker=document.querySelector('#marker'),scene=document.querySelector('a-s
 let found=false;marker.addEventListener('markerFound',()=>{found=true;topText.textContent='Marcador reconocido. Pulsa «Leer colores del papel»';});
 marker.addEventListener('markerLost',()=>{found=false;topText.textContent='Enfoca el marcador HIRO de la lámina';});
 scene.addEventListener('loaded',()=>{scene.addEventListener('renderstart',()=>{const swing=document.querySelector('#swing');swing.setAttribute('animation','property:rotation;from:-8 0 0;to:8 0 0;dur:1700;dir:alternate;loop:true;easing:easeInOutSine');});});
-function sample(video,x,y){const w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw Error('La cámara no está lista');
-const c=document.createElement('canvas');c.width=innerWidth;c.height=innerHeight;const ctx=c.getContext('2d',{willReadFrequently:true});
-const rect=video.getBoundingClientRect();
-const vw=rect.width||innerWidth,vh=rect.height||innerHeight;
-const scale=Math.max(vw/w,vh/h),dw=w*scale,dh=h*scale;
-ctx.drawImage(video,rect.left+(vw-dw)/2,rect.top+(vh-dh)/2,dw,dh);
-const px=Math.round(x),py=Math.round(y),r=8;if(px<r||py<r||px>=c.width-r||py>=c.height-r)throw Error('Acerca la lámina: las zonas deben verse completas');
-const data=ctx.getImageData(px-r,py-r,r*2,r*2).data;let rr=[],gg=[],bb=[];
-for(let i=0;i<data.length;i+=4){rr.push(data[i]);gg.push(data[i+1]);bb.push(data[i+2]);}
-const med=a=>a.sort((x,y)=>x-y)[Math.floor(a.length/2)];return '#'+[med(rr),med(gg),med(bb)].map(n=>n.toString(16).padStart(2,'0')).join('');
+
+let step=0;
+const button=document.querySelector('#scan');
+button.addEventListener('click',()=>{step=1;topText.textContent='Toca el CENTRO del círculo coloreado VESTIDO en la imagen';});
+function getColorAt(clientX,clientY){
+ const video=document.querySelector('video');
+ if(!video||video.readyState<2)throw Error('La cámara todavía no está lista');
+ const rect=video.getBoundingClientRect();
+ const vw=video.videoWidth,vh=video.videoHeight;
+ // AR.js presenta el vídeo como fondo con recorte de tipo cover.
+ const scale=Math.max(rect.width/vw,rect.height/vh);
+ const displayedW=vw*scale,displayedH=vh*scale;
+ const left=rect.left+(rect.width-displayedW)/2,top=rect.top+(rect.height-displayedH)/2;
+ let x=(clientX-left)/scale,y=(clientY-top)/scale;
+ const transform=getComputedStyle(video).transform;
+ if(transform.startsWith('matrix(')){const nums=transform.slice(7,-1).split(',').map(Number);if(nums[0]<0)x=vw-x;if(nums[3]<0)y=vh-y;}
+ if(x<0||y<0||x>=vw||y>=vh)throw Error('Punto fuera de la imagen de cámara');
+ const c=document.createElement('canvas');c.width=vw;c.height=vh;
+ const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(video,0,0,vw,vh);
+ const r=Math.max(3,Math.round(Math.min(vw,vh)*0.008));
+ const d=ctx.getImageData(Math.max(0,Math.round(x)-r),Math.max(0,Math.round(y)-r),2*r,2*r).data;
+ const rs=[],gs=[],bs=[];
+ for(let i=0;i<d.length;i+=4){rs.push(d[i]);gs.push(d[i+1]);bs.push(d[i+2]);}
+ const median=a=>a.sort((a,b)=>a-b)[Math.floor(a.length/2)];
+ return '#'+[median(rs),median(gs),median(bs)].map(n=>n.toString(16).padStart(2,'0')).join('');
 }
-function screenPoint(x,z){const p=new THREE.Vector3(x,0,z);marker.object3D.updateWorldMatrix(true,false);marker.object3D.localToWorld(p);p.project(scene.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};}
-document.querySelector('#scan').addEventListener('click',()=>{
-try{if(!found)throw Error('Primero enfoca el marcador HIRO');const video=document.querySelector('video');if(!video)throw Error('No encuentro la imagen de la cámara');
-const a=screenPoint(-1.20,0),b=screenPoint(1.20,0);
-const colorA=sample(video,a.x,a.y),colorB=sample(video,b.x,b.y);
-document.querySelector('#dress').setAttribute('color',colorA);document.querySelector('#hair').setAttribute('color',colorB);
-document.querySelector('#v').style.background=colorA;document.querySelector('#p').style.background=colorB;
-topText.textContent='Colores leídos: vestido '+colorA+' · pelo '+colorB;
-}catch(e){topText.textContent='No se pudo leer: '+e.message;}
-});
+document.addEventListener('pointerdown',event=>{
+ if(!step||event.target.closest('#bar'))return;
+ try{
+ const color=getColorAt(event.clientX,event.clientY);
+ if(step===1){
+ document.querySelector('#dress').setAttribute('color',color);
+ document.querySelector('#v').style.background=color;
+ topText.textContent='Vestido '+color+' · ahora toca el CENTRO del círculo PELO';
+ step=2;
+ }else{
+ document.querySelector('#hair').setAttribute('color',color);
+ document.querySelector('#p').style.background=color;
+ topText.textContent='Colores aplicados. Vestido y pelo listos. Puedes repetir.';
+ step=0;
+ }
+ }catch(e){topText.textContent='Error de lectura: '+e.message;}
+},true);
 </script></body></html>
