@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MADDI — Prueba AR 01</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/aframe/build/aframe-ar.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#111;font-family:Arial,sans-serif}
+#estado{position:fixed;z-index:10;top:12px;left:12px;right:12px;background:#173b34e8;color:white;padding:14px;text-align:center;border-radius:12px;font-size:16px;pointer-events:none}
+#pie{position:fixed;z-index:10;bottom:15px;left:12px;right:12px;background:#111c;color:white;text-align:center;padding:10px;border-radius:10px;font-size:13px;pointer-events:none}
+</style>
+<script>
+AFRAME.registerComponent('estado-marcador',{init:function(){
+var e=document.getElementById('estado');
+this.el.addEventListener('markerFound',function(){e.textContent='¡MADDI aparece sobre el papel!'});
+this.el.addEventListener('markerLost',function(){e.textContent='Enfoca el marcador HIRO impreso'});
+}});
+AFRAME.registerComponent('flotar',{tick:function(t){
+this.el.object3D.position.y=0.35+0.09*Math.sin(t/380);
+this.el.object3D.rotation.y=0.12*Math.sin(t/700);
+}});
+</script>
+</head>
+<body>
+<div id="estado">Permite la cámara y enfoca el marcador HIRO impreso</div>
+<div id="pie">MADDI 2.0 · Prueba técnica de seguimiento AR · Sin captura de colores todavía</div>
+<a-scene embedded vr-mode-ui="enabled:false" renderer="logarithmicDepthBuffer:true;antialias:true" arjs="sourceType:webcam;debugUIEnabled:false;trackingMethod:best;" device-orientation-permission-ui="enabled:false">
+<a-marker preset="hiro" estado-marcador>
+<a-entity flotar>
+<a-text value="MADDI" align="center" color="#FFCE4C" width="3.5" position="0 0.2 0" rotation="-90 0 0" material="side:double"></a-text>
+<a-box position="0 0 0.3" width="1.3" height="0.07" depth="0.2" color="#47C7AD"></a-box>
+<a-sphere position="-0.5 0.13 -0.35" radius="0.10" color="#F59BB5"></a-sphere>
+<a-sphere position="0.5 0.13 -0.35" radius="0.10" color="#F59BB5"></a-sphere>
+</a-entity>
+</a-marker>
+<a-entity camera></a-entity>
+</a-scene>
+</body>
+</html>
