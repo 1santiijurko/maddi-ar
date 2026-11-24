@@ -1,0 +1,83 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MADDI 10 · Colorea y anima</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script><script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/aframe/build/aframe-ar.js"></script>
+<style>html,body{margin:0;overflow:hidden;background:#111;font-family:Arial,sans-serif}#status{position:fixed;top:9px;left:9px;right:9px;z-index:10;background:#163b35e8;color:white;padding:10px;border-radius:10px;text-align:center;font-size:14px;pointer-events:none}#colors{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:10;background:#fffdf4e8;border-radius:10px;padding:7px 12px;font-size:13px;pointer-events:none;white-space:nowrap}.sw{display:inline-block;width:17px;height:17px;vertical-align:middle;border-radius:4px;border:1px solid #aaa}</style>
+</head><body><div id="status">Permite la cámara y enfoca la lámina completa de MADDI</div><div id="colors">Vestido <span id="dressSw" class="sw"></span> &nbsp; Pelo <span id="hairSw" class="sw"></span></div>
+<a-scene embedded vr-mode-ui="enabled:false" renderer="antialias:true;logarithmicDepthBuffer:true" arjs="sourceType:webcam;debugUIEnabled:false;trackingMethod:best;" device-orientation-permission-ui="enabled:false">
+<a-marker id="marker" preset="hiro">
+<!-- Centro del modelo desplazado hacia la ilustración, sobre el marcador -->
+<a-entity position="0 0.55 -1.1" rotation="-70 0 0" scale="1.55 1.55 1.55">
+<!-- armazón -->
+<a-cylinder position="-.31 -.35 0" radius=".018" height=".75" color="#6A9DAD"></a-cylinder>
+<a-cylinder position=".31 -.35 0" radius=".018" height=".75" color="#6A9DAD"></a-cylinder>
+<a-cylinder position="0 .035 0" rotation="0 0 90" radius=".024" height=".69" color="#4B8195"></a-cylinder>
+<a-entity id="swing" position="0 .025 0">
+<a-cylinder position="-.19 -.27 0" radius=".006" height=".54" color="#D7B47A"></a-cylinder>
+<a-cylinder position=".19 -.27 0" radius=".006" height=".54" color="#D7B47A"></a-cylinder>
+<a-box position="0 -.53 0" width=".47" height=".035" depth=".24" color="#BB8255"></a-box>
+<!-- cabeza con cabello editable -->
+<a-sphere id="hair" position="0 -.29 -.018" radius=".118" color="#75503B" scale="1.04 1.1 .9"></a-sphere>
+<a-sphere position="0 -.325 .05" radius=".096" color="#F2C7AB"></a-sphere>
+<a-sphere position="-.041 -.332 .139" radius=".009" color="#38313B"></a-sphere>
+<a-sphere position=".041 -.332 .139" radius=".009" color="#38313B"></a-sphere>
+<a-sphere position="-.061 -.362 .124" radius=".018" color="#EFA6A5" opacity=".7"></a-sphere>
+<a-sphere position=".061 -.362 .124" radius=".018" color="#EFA6A5" opacity=".7"></a-sphere>
+<a-torus position="0 -.383 .134" radius=".018" radius-tubular=".003" arc="180" rotation="0 0 180" color="#AC6965"></a-torus>
+<a-sphere position=".105 -.28 -.05" radius=".046" color="#75503B"></a-sphere>
+<!-- vestido y cuerpo -->
+<a-cone id="dress" position="0 -.47 0" radius-bottom=".14" radius-top=".075" height=".24" color="#E58CA6"></a-cone>
+<a-cylinder position="-.15 -.44 .01" rotation="0 0 -48" radius=".025" height=".21" color="#F2C7AB"></a-cylinder>
+<a-cylinder position=".15 -.44 .01" rotation="0 0 48" radius=".025" height=".21" color="#F2C7AB"></a-cylinder>
+<a-cylinder position="-.065 -.64 .055" rotation="60 0 0" radius=".025" height=".16" color="#F2C7AB"></a-cylinder>
+<a-cylinder position=".065 -.64 .055" rotation="60 0 0" radius=".025" height=".16" color="#F2C7AB"></a-cylinder>
+<a-ellipsoid position="-.07 -.69 .115" radius=".043" color="#C789AF"></a-ellipsoid>
+<a-ellipsoid position=".07 -.69 .115" radius=".043" color="#C789AF"></a-ellipsoid>
+</a-entity></a-entity>
+</a-marker><a-entity camera></a-entity></a-scene>
+<script>
+const marker=document.getElementById('marker'),scene=document.querySelector('a-scene'),status=document.getElementById('status');
+let visible=false,last=0,confirmed=0,stableDress=null,stableHair=null;
+marker.addEventListener('markerFound',()=>{visible=true;status.textContent='MADDI reconocida · leyendo los colores del dibujo';});
+marker.addEventListener('markerLost',()=>{visible=false;status.textContent='Enfoca de nuevo el marcador de la lámina';});
+document.getElementById('swing').setAttribute('animation','property:rotation;from:-7 0 0;to:7 0 0;dur:2000;dir:alternate;loop:true;easing:easeInOutSine');
+const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+function screen(x,z){marker.object3D.updateWorldMatrix(true,false);scene.camera.updateMatrixWorld(true);const p=new THREE.Vector3(x,0,z);marker.object3D.localToWorld(p);p.project(scene.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};}
+function sat(rgb){const hi=Math.max(...rgb),lo=Math.min(...rgb);return hi?(hi-lo)/hi:0;}
+function sample(video,point){
+ const rect=video.getBoundingClientRect(),w=video.videoWidth,h=video.videoHeight;
+ const scale=Math.max(rect.width/w,rect.height/h),left=rect.left+(rect.width-w*scale)/2,top=rect.top+(rect.height-h*scale)/2;
+ let x=(point.x-left)/scale,y=(point.y-top)/scale;
+ const tr=getComputedStyle(video).transform;
+ if(tr.startsWith('matrix(')){const a=tr.slice(7,-1).split(',').map(Number);if(a[0]<0)x=w-x;if(a[3]<0)y=h-y;}
+ if(x<0||y<0||x>=w||y>=h)throw Error('Zona fuera de cámara');
+ const radius=Math.max(5,Math.round(Math.min(w,h)*.018));
+ const xx=Math.max(0,Math.round(x)-radius),yy=Math.max(0,Math.round(y)-radius);
+ const data=ctx.getImageData(xx,yy,Math.min(radius*2,w-xx),Math.min(radius*2,h-yy)).data;
+ const rs=[],gs=[],bs=[];
+ for(let i=0;i<data.length;i+=4){const rgb=[data[i],data[i+1],data[i+2]];if(sat(rgb)>.20&&Math.max(...rgb)>55){rs.push(rgb[0]);gs.push(rgb[1]);bs.push(rgb[2]);}}
+ if(rs.length<12)throw Error('Color insuficiente');
+ const med=a=>a.sort((a,b)=>a-b)[Math.floor(a.length/2)];
+ return [med(rs),med(gs),med(bs)];
+}
+const hex=rgb=>'#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');
+const smooth=(prev,next)=>prev?next.map((v,i)=>Math.round(.7*prev[i]+.3*v)):next;
+function tick(t){
+ requestAnimationFrame(tick);
+ if(!visible||!scene.camera||t-last<1000)return;last=t;
+ const video=document.querySelector('video');if(!video||video.readyState<2)return;
+ try{
+ canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0,canvas.width,canvas.height);
+ // La ilustración está por encima de HIRO. Escala: 1 unidad ≈ ancho de HIRO.
+ // Centro vestido ~73 mm por encima del centro HIRO; pelo ~119 mm por encima.
+ const dress=sample(video,screen(0,-1.37));
+ const hair=sample(video,screen(0,-2.23));
+ stableDress=smooth(stableDress,dress);stableHair=smooth(stableHair,hair);
+ const dc=hex(stableDress),hc=hex(stableHair);
+ document.getElementById('dress').setAttribute('color',dc);
+ document.getElementById('hair').setAttribute('color',hc);
+ document.getElementById('dressSw').style.background=dc;
+ document.getElementById('hairSw').style.background=hc;
+ confirmed++;status.textContent='MADDI se columpia con los colores del papel';
+ }catch(e){status.textContent=confirmed?'Manteniendo colores · encuadra la lámina completa':'Encuadra la lámina completa para leer vestido y pelo';}
+}
+requestAnimationFrame(tick);
+</script></body></html>
