@@ -1,0 +1,100 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MADDI · Color 09 · Dibujo</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script><script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/aframe/build/aframe-ar.js"></script>
+<style>body{margin:0;background:#111;font-family:system-ui}#top{position:fixed;top:10px;left:10px;right:10px;background:#143d35ee;color:white;z-index:9;padding:12px;border-radius:10px;text-align:center}#bar{position:fixed;bottom:15px;left:10px;right:10px;z-index:9;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}button,a{background:#fff;border:0;border-radius:9px;padding:12px;color:#173d34;font-weight:bold;text-decoration:none}#swatches{background:#fff;padding:8px;border-radius:9px;display:flex;gap:8px}.dot{display:inline-block;width:24px;height:24px;border:1px solid #888;border-radius:5px}</style></head><body>
+<div id="top">MADDI · Prueba 09 · Colorear el dibujo</div>
+<div id="bar"><span id="swatches">Vestido <span class="dot" id="v"></span> Pelo <span class="dot" id="p"></span></span></div>
+<a-scene embedded vr-mode-ui="enabled:false" renderer="antialias:true" arjs="sourceType:webcam;debugUIEnabled:false;trackingMethod:best;">
+<a-marker preset="hiro" id="marker"><a-entity position="0.10 0.53 0" rotation="-70 0 0" scale="1.45 1.45 1.45">
+<a-cylinder position="-0.28 -0.27 0" radius=".014" height=".54" color="#527F93"></a-cylinder><a-cylinder position=".28 -0.27 0" radius=".014" height=".54" color="#527F93"></a-cylinder>
+<a-cylinder position="0 0 0" rotation="0 0 90" radius=".02" height=".6" color="#527F93"></a-cylinder>
+<a-entity id="swing" position="0 0 0">
+<a-cylinder position="-.15 -.23 0" radius=".007" height=".46" color="#D5A971"></a-cylinder><a-cylinder position=".15 -.23 0" radius=".007" height=".46" color="#D5A971"></a-cylinder>
+<a-box position="0 -.46 0" width=".38" height=".03" depth=".18" color="#A76D43"></a-box>
+<a-sphere id="hair" position="0 -.26 -.018" radius=".088" color="#654432"></a-sphere>
+<a-sphere position="0 -.29 .035" radius=".075" color="#F2C5A4"></a-sphere>
+<a-sphere position="-.026 -.293 .104" radius=".008" color="#322B32"></a-sphere>
+<a-sphere position=".026 -.293 .104" radius=".008" color="#322B32"></a-sphere>
+<a-sphere position="-.044 -.322 .088" radius=".013" color="#F6A7A9" opacity=".8"></a-sphere>
+<a-sphere position=".044 -.322 .088" radius=".013" color="#F6A7A9" opacity=".8"></a-sphere>
+<a-torus position="0 -.327 .103" radius=".013" radius-tubular=".002" arc="180" rotation="0 0 180" color="#AA645E"></a-torus>
+<a-sphere position=".085 -.27 -.02" radius=".036" color="#654432"></a-sphere>
+<a-cylinder position="-.055 -.53 .07" rotation="65 0 0" radius=".020" height=".16" color="#F2C5A4"></a-cylinder>
+<a-cylinder position=".055 -.53 .07" rotation="65 0 0" radius=".020" height=".16" color="#F2C5A4"></a-cylinder>
+<a-cone id="dress" position="0 -.39 0" radius-bottom=".095" radius-top=".052" height=".16" color="#F28CA5"></a-cone>
+</a-entity></a-entity></a-marker><a-entity camera></a-entity></a-scene>
+<script>
+const marker=document.querySelector('#marker'),scene=document.querySelector('a-scene'),topText=document.querySelector('#top');
+let found=false;marker.addEventListener('markerFound',()=>{found=true;topText.textContent='Marcador reconocido. Pulsa «Leer colores del papel»';});
+marker.addEventListener('markerLost',()=>{found=false;topText.textContent='Enfoca el marcador HIRO de la lámina';});
+scene.addEventListener('loaded',()=>{scene.addEventListener('renderstart',()=>{const swing=document.querySelector('#swing');swing.setAttribute('animation','property:rotation;from:-8 0 0;to:8 0 0;dur:1700;dir:alternate;loop:true;easing:easeInOutSine');});});
+
+
+const videoCanvas=document.createElement('canvas');
+const ctx=videoCanvas.getContext('2d',{willReadFrequently:true});
+let lastScan=0,successes=0;let stableA=null,stableB=null;
+function pointOnScreen(x,z){
+ marker.object3D.updateWorldMatrix(true,false);
+ scene.camera.updateMatrixWorld(true);
+ const p=new THREE.Vector3(x,0,z);
+ marker.object3D.localToWorld(p);
+ p.project(scene.camera);
+ return {x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};
+}
+function sample(video,point){
+ const rect=video.getBoundingClientRect();
+ const vw=video.videoWidth,vh=video.videoHeight;
+ if(!vw||!vh)throw Error('Cámara no preparada');
+ const scale=Math.max(rect.width/vw,rect.height/vh);
+ const left=rect.left+(rect.width-vw*scale)/2,top=rect.top+(rect.height-vh*scale)/2;
+ let x=(point.x-left)/scale,y=(point.y-top)/scale;
+ const transform=getComputedStyle(video).transform;
+ if(transform.startsWith('matrix(')){const a=transform.slice(7,-1).split(',').map(Number);if(a[0]<0)x=vw-x;if(a[3]<0)y=vh-y;}
+ if(x<0||y<0||x>=vw||y>=vh)throw Error('La lámina debe verse completa');
+ if(videoCanvas.width!==vw||videoCanvas.height!==vh){videoCanvas.width=vw;videoCanvas.height=vh;}
+ const radius=Math.max(4,Math.floor(Math.min(vw,vh)*0.016));
+ const px=Math.round(x),py=Math.round(y);
+ const sx=Math.max(0,px-radius),sy=Math.max(0,py-radius);
+ const sw=Math.min(vw-sx,radius*2),sh=Math.min(vh-sy,radius*2);
+ const data=ctx.getImageData(sx,sy,sw,sh).data;
+ const rr=[],gg=[],bb=[];
+ for(let i=0;i<data.length;i+=4){const rgb=[data[i],data[i+1],data[i+2]];if(saturation(rgb)>0.19){rr.push(rgb[0]);gg.push(rgb[1]);bb.push(rgb[2]);}}
+ if(rr.length<8)throw Error('Color insuficiente');
+ const med=a=>a.sort((x,y)=>x-y)[Math.floor(a.length/2)];
+ return [med(rr),med(gg),med(bb)];
+}
+function hex(rgb){return '#'+rgb.map(n=>n.toString(16).padStart(2,'0')).join('');}
+function saturation(rgb){const hi=Math.max(...rgb),lo=Math.min(...rgb);return hi===0?0:(hi-lo)/hi;}
+function scan(t){
+ requestAnimationFrame(scan);
+ if(!found||t-lastScan<900||!scene.camera)return;
+ lastScan=t;
+ try{
+ const video=document.querySelector('video');
+ if(!video||video.readyState<2)return;
+ videoCanvas.width=video.videoWidth;videoCanvas.height=video.videoHeight;
+ ctx.drawImage(video,0,0,videoCanvas.width,videoCanvas.height);
+ // Centros de los círculos de la lámina A4: ±70 mm desde el centro del HIRO (75 mm).
+ // El marcador se aproxima a una unidad de ancho en coordenadas AR.js.
+ const left=sample(video,pointOnScreen(-1.27,0));
+ const right=sample(video,pointOnScreen(1.27,0));
+ // Si la orientación del marcador se invierte, se necesitará corregir el orden.
+ // Evitamos aplicar blanco/gris procedente de una lectura fallida.
+ if(saturation(left)<0.16||saturation(right)<0.16){
+ topText.textContent='Buscando los colores del vestido y el pelo…';
+ return;
+ }
+ const smooth=(old,now)=>old?now.map((v,i)=>Math.round(old[i]*0.65+v*0.35)):now;
+ stableA=smooth(stableA,left);stableB=smooth(stableB,right);
+ const a=hex(stableA),b=hex(stableB);
+ document.querySelector('#dress').setAttribute('color',a);
+ document.querySelector('#hair').setAttribute('color',b);
+ document.querySelector('#v').style.background=a;
+ document.querySelector('#p').style.background=b;
+ successes++;
+ topText.textContent='Colores detectados automáticamente · vestido '+a+' · pelo '+b;
+ }catch(e){topText.textContent='Ajusta la distancia para ver ambos círculos';}
+}
+marker.addEventListener('markerFound',()=>{topText.textContent='Leyendo colores automáticamente…';});
+marker.addEventListener('markerLost',()=>{topText.textContent=successes?'Colores conservados · vuelve a enfocar HIRO':'Enfoca la lámina con los dos círculos';});
+requestAnimationFrame(scan);
+</script></body></html>
