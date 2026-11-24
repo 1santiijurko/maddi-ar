@@ -29,8 +29,8 @@
 <a-cylinder position=".15 -.44 .01" rotation="0 0 48" radius=".025" height=".21" color="#F2C7AB"></a-cylinder>
 <a-cylinder position="-.065 -.64 .055" rotation="60 0 0" radius=".025" height=".16" color="#F2C7AB"></a-cylinder>
 <a-cylinder position=".065 -.64 .055" rotation="60 0 0" radius=".025" height=".16" color="#F2C7AB"></a-cylinder>
-<a-ellipsoid position="-.07 -.69 .115" radius=".043" color="#C789AF"></a-ellipsoid>
-<a-ellipsoid position=".07 -.69 .115" radius=".043" color="#C789AF"></a-ellipsoid>
+<a-sphere position="-.07 -.69 .115" radius=".043" color="#C789AF"></a-sphere>
+<a-sphere position=".07 -.69 .115" radius=".043" color="#C789AF"></a-sphere>
 </a-entity></a-entity>
 </a-marker><a-entity camera></a-entity></a-scene>
 <script>
@@ -68,8 +68,8 @@ function tick(t){
  canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0,canvas.width,canvas.height);
  // La ilustración está por encima de HIRO. Escala: 1 unidad ≈ ancho de HIRO.
  // Centro vestido ~73 mm por encima del centro HIRO; pelo ~119 mm por encima.
- const dress=sample(video,screen(0,-1.37));
- const hair=sample(video,screen(0,-2.23));
+ const dress=sample(video,screen(0,-1.46));
+ const hair=sample(video,screen(-0.17,-2.50));
  stableDress=smooth(stableDress,dress);stableHair=smooth(stableHair,hair);
  const dc=hex(stableDress),hc=hex(stableHair);
  document.getElementById('dress').setAttribute('color',dc);
